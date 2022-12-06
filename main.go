@@ -1,29 +1,55 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"text/template"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
-var homeTemplate = template.Must(template.ParseFiles("index.html"))
+var (
+	homeTemplate   = template.Must(template.ParseFiles("template/index.html"))
+	resultTemplate = template.Must(template.ParseFiles("template/result.html"))
+)
 
-func home(w http.ResponseWriter, r *http.Request) {
-	err := homeTemplate.Execute(w, "index.html")
-	if err != nil {
-		w.Write([]byte("err"))
-		return
+const (
+	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+)
+
+func randomString() string {
+	// Define the set of characters that can be used in the random string.
+
+	// Initialize a new random number generator with a seed value based on the current time.
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// Create a new slice of bytes to hold the random string.
+	b := make([]byte, 7)
+
+	// Populate the slice with random characters from the charset.
+	for i := range b {
+		b[i] = charset[r.Intn(len(charset))]
 	}
 
+	// Return the string version of the byte slice.
+	return string(b)
+}
+func home(w http.ResponseWriter, r *http.Request) {
+	err := homeTemplate.Execute(w, nil)
+	if err != nil {
+		return
+	}
 }
 
 func create(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
-	fmt.Println(url)
-	w.Write([]byte("You submitted: " + url))
+
+	err := resultTemplate.Execute(w, map[string]string{"original": url, "shortened": randomString()})
+	if err != nil {
+		return
+	}
 }
 
 func main() {
