@@ -68,7 +68,7 @@ func create(w http.ResponseWriter, r *http.Request) {
 	}
 	input := r.FormValue("url")
 	longUrl := input
-	if input != "" && !strings.HasPrefix(input, "https://") && !strings.HasPrefix(input, "http://") {
+	if longUrl != "" && !strings.HasPrefix(longUrl, "https://") && !strings.HasPrefix(longUrl, "http://") {
 		longUrl = "https://" + longUrl
 	}
 
@@ -82,7 +82,7 @@ func create(w http.ResponseWriter, r *http.Request) {
 	key := randomString(7)
 	scheme := getHTTPSchemeFromRequest()
 	shortened := fmt.Sprintf("%s://%s/%s", scheme, r.Host, key)
-	payload := UrlPayload{longUrl, shortened, ""}
+	payload := UrlPayload{input, shortened, ""}
 
 	err = redisDao.Set(context.Background(), key, longUrl, 1*time.Hour)
 	if err != nil {
