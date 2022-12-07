@@ -33,8 +33,9 @@ type UrlPayload struct {
 	Shortened string
 }
 
-func getHTTPSchemeFromRequest(r *http.Request) string {
-	if r.TLS == nil {
+func getHTTPSchemeFromRequest() string {
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv == "dev" {
 		return "http"
 	}
 	return "https"
@@ -66,7 +67,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 func create(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
 	key := randomString(7)
-	scheme := getHTTPSchemeFromRequest(r)
+	scheme := getHTTPSchemeFromRequest()
 	shortened := fmt.Sprintf("%s://%s/%s", scheme, r.Host, key)
 	payload := UrlPayload{url, shortened}
 
