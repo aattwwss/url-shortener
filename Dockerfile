@@ -8,8 +8,8 @@ RUN go mod download
 
 COPY . ./
 
-RUN go build -o /app
+RUN go build -o /url-shortener
 
 #EXPOSE 8080
 
-CMD [ "/app" ]
+CMD [ "/url-shortener" ]
