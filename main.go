@@ -19,6 +19,11 @@ const (
 	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 )
 
+type UrlPayload struct {
+	Original  string
+	Shortened string
+}
+
 func randomString() string {
 	// Define the set of characters that can be used in the random string.
 
@@ -36,8 +41,9 @@ func randomString() string {
 	// Return the string version of the byte slice.
 	return string(b)
 }
+
 func home(w http.ResponseWriter, r *http.Request) {
-	err := homeTemplate.Execute(w, nil)
+	err := homeTemplate.Execute(w, UrlPayload{})
 	if err != nil {
 		return
 	}
@@ -45,8 +51,8 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 func create(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
-
-	err := resultTemplate.Execute(w, map[string]string{"original": url, "shortened": randomString()})
+	payload := UrlPayload{url, randomString()}
+	err := homeTemplate.Execute(w, payload)
 	if err != nil {
 		return
 	}

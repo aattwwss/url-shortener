@@ -1,14 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="stylesheet" href="static/style.css">
-  <title>URL Shortener</title>
+    <link rel="stylesheet" href="static/style.css">
+    <title>URL Shortener</title>
 </head>
 <body>
-<form action="" method="POST">
-  <label for="input">Enter some text:</label>
-  <input type="text" id="input" name="url">
-  <button type="submit">Submit</button>
-</form>
+<div>
+    <form action="" method="POST">
+        <label for="input">Enter some text:</label>
+        <input type="text" id="input" name="url" value={{.Original}}>
+        <button type="submit">Submit</button>
+    </form>
+</div>
+<div>
+    {{if .Shortened}}
+    <p>Your Shortened url is</p>
+    <p>{{.Shortened}}</p>
+    {{end}}
+</div>
 </body>
 </html>
