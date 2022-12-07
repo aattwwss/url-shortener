@@ -12,10 +12,10 @@
         <button type="submit">Submit</button>
     </form>
 </div>
-<div>
+<div><p></p>
     {{if .Shortened}}
-    <p>Your Shortened url is</p>
-    <p>{{.Shortened}}</p>
+    <label for="shortened">Your shortened url is:</label>
+    <input type="text" id="shortened" name="country" value={{.Shortened}} readonly>
     {{else if .Error}}
     <p>Invalid URL.</p>
     {{end}}
