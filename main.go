@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"github.com/joho/godotenv"
 	"log"
@@ -15,10 +16,12 @@ import (
 )
 
 var (
-	redisDao *RedisDAO
+	//go:embed templates
+	templateFolder embed.FS
+	redisDao       *RedisDAO
 
-	homeTemplate = template.Must(template.ParseFiles("template/index.html"))
-	//resultTemplate = template.Must(template.ParseFiles("template/result.html"))
+	//homeTemplate = templates.Must(templates.ParseFiles("templates/index.html"))
+	//resultTemplate = templates.Must(templates.ParseFiles("templates/result.html"))
 )
 
 const (
@@ -50,7 +53,11 @@ func randomString(length int) string {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	err := homeTemplate.Execute(w, UrlPayload{})
+	homeTemplate, err := template.ParseFS(templateFolder, "templates/index.html")
+	if err != nil {
+		return
+	}
+	err = homeTemplate.Execute(w, UrlPayload{})
 	if err != nil {
 		return
 	}
@@ -69,6 +76,10 @@ func create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	homeTemplate, err := template.ParseFS(templateFolder, "templates/index.html")
+	if err != nil {
+		return
+	}
 	err = homeTemplate.Execute(w, payload)
 	if err != nil {
 		return
