@@ -8,7 +8,9 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"text/template"
 	"time"
 
@@ -19,9 +21,6 @@ var (
 	//go:embed templates
 	templateFolder embed.FS
 	redisDao       *RedisDAO
-
-	//homeTemplate = templates.Must(templates.ParseFiles("templates/index.html"))
-	//resultTemplate = templates.Must(templates.ParseFiles("templates/result.html"))
 )
 
 const (
@@ -31,6 +30,7 @@ const (
 type UrlPayload struct {
 	Original  string
 	Shortened string
+	Error     string
 }
 
 func getHTTPSchemeFromRequest() string {
@@ -58,44 +58,50 @@ func home(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	err = homeTemplate.Execute(w, UrlPayload{})
-	if err != nil {
-		return
-	}
+	_ = homeTemplate.Execute(w, UrlPayload{})
 }
 
 func create(w http.ResponseWriter, r *http.Request) {
-	url := r.FormValue("url")
-	key := randomString(7)
-	scheme := getHTTPSchemeFromRequest()
-	shortened := fmt.Sprintf("%s://%s/%s", scheme, r.Host, key)
-	payload := UrlPayload{url, shortened}
-
-	err := redisDao.Set(context.Background(), key, url, 1*time.Hour)
-	if err != nil {
-		log.Println("Error setting url")
-		return
-	}
-
 	homeTemplate, err := template.ParseFS(templateFolder, "templates/index.html")
 	if err != nil {
 		return
 	}
-	err = homeTemplate.Execute(w, payload)
+	input := r.FormValue("url")
+	longUrl := input
+	if input != "" && !strings.HasPrefix(input, "https://") && !strings.HasPrefix(input, "http://") {
+		longUrl = "https://" + longUrl
+	}
+
+	_, err = url.ParseRequestURI(longUrl)
 	if err != nil {
+		payload := UrlPayload{input, "", "Invalid url."}
+		_ = homeTemplate.Execute(w, payload)
 		return
 	}
+
+	key := randomString(7)
+	scheme := getHTTPSchemeFromRequest()
+	shortened := fmt.Sprintf("%s://%s/%s", scheme, r.Host, key)
+	payload := UrlPayload{longUrl, shortened, ""}
+
+	err = redisDao.Set(context.Background(), key, longUrl, 1*time.Hour)
+	if err != nil {
+		log.Println("Error setting longUrl")
+		return
+	}
+
+	_ = homeTemplate.Execute(w, payload)
 }
 
 func redirect(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	key := vars["key"]
-	url, err := redisDao.Get(context.Background(), key)
+	longUrl, err := redisDao.Get(context.Background(), key)
 	if err != nil {
 		log.Printf("Error retrieving url from %v: %v\n", key, err)
 		return
 	}
-	http.Redirect(w, r, url, http.StatusMovedPermanently)
+	http.Redirect(w, r, longUrl, http.StatusMovedPermanently)
 }
 
 func main() {

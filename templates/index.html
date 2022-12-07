@@ -16,6 +16,8 @@
     {{if .Shortened}}
     <p>Your Shortened url is</p>
     <p>{{.Shortened}}</p>
+    {{else if .Error}}
+    <p>Invalid URL.</p>
     {{end}}
 </div>
 </body>
