@@ -1,0 +1,11 @@
+version: "3"
+services:
+  telegram-expense-bot:
+    image: 'url-shortener:latest'
+    restart: unless-stopped
+    volumes:
+      - ./.env:/app/.env
+networks:
+  default:
+    name: nginx-proxy-manager
+    external: true
