@@ -12,13 +12,37 @@
         <button type="submit">Submit</button>
     </form>
 </div>
-<div><p></p>
+<div class="result-container"><p></p>
     {{if .Shortened}}
     <label for="shortened">Your shortened url is:</label>
-    <input type="text" id="shortened" name="country" value={{.Shortened}} readonly>
+    <div class="copy-container">
+        <input type="text" id="shortened" name="country" value={{.Shortened}} readonly>
+        <button id="copy-button">Copy</button>
+    </div>
     {{else if .Error}}
     <p>Invalid URL.</p>
     {{end}}
 </div>
 </body>
 </html>
+
+<script>
+    document.getElementById("copy-button").addEventListener("click", function () {
+        const input = document.getElementById("shortened");
+        input.select();
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(input.value)
+                .then(function () {
+                    document.getElementById("copy-button").textContent = "Copied";
+                    setTimeout(function () {
+                        document.getElementById("copy-button").textContent = "Copy";
+                    }, 1000);
+                })
+                .catch(function (error) {
+                    console.error("Unable to copy to clipboard.", error);
+                });
+        } else {
+            console.warn("Clipboard API not available. Unable to copy to clipboard.");
+        }
+    });
+</script>
