@@ -33,12 +33,12 @@ type UrlPayload struct {
 	Error     string
 }
 
-func getHTTPSchemeFromRequest() string {
-	appEnv := os.Getenv("APP_ENV")
-	if appEnv == "dev" {
-		return "http"
+func getHttpScheme() string {
+	isHttps := os.Getenv("IS_HTTPS")
+	if isHttps == "true" {
+		return "https"
 	}
-	return "https"
+	return "http"
 }
 
 func randomString(length int) string {
@@ -80,7 +80,7 @@ func create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	key := randomString(7)
-	scheme := getHTTPSchemeFromRequest()
+	scheme := getHttpScheme()
 	shortened := fmt.Sprintf("%s://%s/%s", scheme, r.Host, key)
 	payload := UrlPayload{input, shortened, ""}
 
