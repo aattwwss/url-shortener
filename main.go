@@ -53,6 +53,25 @@ func randomString(length int) string {
 	return string(b)
 }
 
+func toDuration(durationUnit string) time.Duration {
+	switch strings.ToLower(durationUnit) {
+	case "minute":
+		return time.Minute
+	case "hour":
+		return time.Hour
+	case "day":
+		return time.Hour * 24
+	case "week":
+		return time.Hour * 24 * 7
+	case "month":
+		return time.Hour * 24 * 30
+	case "year":
+		return time.Hour * 24 * 365
+	default:
+		return time.Hour
+	}
+}
+
 func home(w http.ResponseWriter, r *http.Request) {
 	homeTemplate, err := template.ParseFS(templateFolder, "templates/index.html")
 	if err != nil {
@@ -67,6 +86,7 @@ func create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input := r.FormValue("url")
+	duration := r.FormValue("duration")
 	longUrl := input
 	if longUrl != "" && !strings.HasPrefix(longUrl, "https://") && !strings.HasPrefix(longUrl, "http://") {
 		longUrl = "https://" + longUrl
@@ -81,10 +101,10 @@ func create(w http.ResponseWriter, r *http.Request) {
 
 	key := randomString(7)
 	scheme := getHttpScheme()
-	shortened := fmt.Sprintf("%s://%s/%s", scheme, r.Host, key)
+	shortened := fmt.Sprintf("%s://%s/r/%s", scheme, r.Host, key)
 	payload := UrlPayload{input, shortened, ""}
 
-	err = redisDao.Set(context.Background(), key, longUrl, 1*time.Hour)
+	err = redisDao.Set(context.Background(), key, longUrl, toDuration(duration))
 	if err != nil {
 		log.Println("Error setting longUrl")
 		return
@@ -125,7 +145,7 @@ func main() {
 
 	router.HandleFunc("/", home).Methods("GET")
 	router.HandleFunc("/", create).Methods("POST")
-	router.HandleFunc("/{key}", redirect).Methods("GET")
+	router.HandleFunc("/r/{key}", redirect).Methods("GET")
 
 	err = http.ListenAndServe(":9090", router)
 	if err != nil {
