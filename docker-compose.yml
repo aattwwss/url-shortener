@@ -2,6 +2,7 @@ version: "3"
 services:
   url-shortener:
     image: 'url-shortener:latest'
+    container_name: url-shortener
     restart: unless-stopped
     volumes:
       - ./.env:/app/.env
