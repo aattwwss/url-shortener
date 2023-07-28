@@ -40,13 +40,18 @@ form {
     margin-bottom: 20px;
 }
 
-input[type="url"] {
+input[type="url"],
+select[name="duration"] {
     flex: 1;
     padding: 10px;
     font-size: 16px;
     border: 1px solid #1376ba;
     border-radius: 4px;
     margin-right: 10px;
+}
+
+select[name="duration"] {
+    max-width: 120px;
 }
 
 button {
