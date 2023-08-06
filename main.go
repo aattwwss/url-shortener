@@ -124,6 +124,13 @@ func redirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, longUrl, http.StatusMovedPermanently)
 }
 
+func rateLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("middleware1")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -140,15 +147,27 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error setting up redis: %v", err)
 	}
+
 	router := mux.NewRouter()
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	router.HandleFunc("/", home).Methods(http.MethodGet)
+	router.HandleFunc("/r/{key}", redirect).Methods(http.MethodGet)
 
-	router.HandleFunc("/", home).Methods("GET")
-	router.HandleFunc("/", create).Methods("POST")
-	router.HandleFunc("/r/{key}", redirect).Methods("GET")
+	limited := router.PathPrefix("").Subrouter()
+	limited.Use(rateLimit)
+	limited.HandleFunc("/", create).Methods(http.MethodPost)
 
-	err = http.ListenAndServe(":9090", router)
-	if err != nil {
+	server := &http.Server{
+		Addr:         ":9090",
+		WriteTimeout: time.Second * 5,
+		ReadTimeout:  time.Second * 5,
+		IdleTimeout:  time.Second * 30,
+		Handler:      router,
+	}
+
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalln("There's an error with the server", err)
 	}
+
+	return
 }
