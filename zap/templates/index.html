@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+</head>
+<body>
+<div class="card">
+    <header>
+        <h1>URL Shortener</h1>
+    </header>
+
+    <main>
+        <form action="" method="POST">
+            {{if .Original}}
+            <input type="url" name="url" value={{.Original}} required>
+            {{else}}
+            <input type="url" name="url" placeholder="Enter your long URL" required>
+            {{end}}
+            <select name="duration" required>
+                <option value="hour">1 Hour</option>
+                <option value="day">1 Day</option>
+                <option value="week">1 Week</option>
+            </select>
+            <button type="submit">Shorten</button>
+        </form>
+
+        <div id="shortened-url">
+            {{if .Shortened}}
+            <!-- Display shortened URL here -->
+            {{.Shortened}}
+            <button id="copy-button">Copy</button>
+            {{else if .Error}}
+            Invalid URL.
+            {{end}}
+        </div>
+    </main>
+</div>
+</body>
+</html>
+
+
+<script>
+    document.getElementById("copy-button")?.addEventListener("click", function () {
+        const shortenedUrl = document.getElementById("shortened-url").textContent.trim().split("\n")[0];
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shortenedUrl)
+                .then(function () {
+                    let button = document.getElementById("copy-button");
+                    if (button.textContent === "Copy") {
+                        setTimeout(function () {
+                            button.textContent = "Copy";
+                        }, 1000);
+                    }
+                    button.textContent = "Copied";
+                })
+                .catch(function (error) {
+                    console.error("Unable to copy to clipboard.", error);
+                });
+        } else {
+            console.warn("Clipboard API not available. Unable to copy to clipboard.");
+        }
+    });
+</script>

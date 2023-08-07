@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"context"
@@ -9,11 +9,11 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-type RedisDAO struct {
+type RedisClient struct {
 	client *redis.Client
 }
 
-func NewRedisDAO(ctx context.Context, redisURL string, db string, username string, password string) (*RedisDAO, error) {
+func NewRedisClient(ctx context.Context, redisURL string, db string, username string, password string) (*RedisClient, error) {
 	// Create a new Redis client.
 	dbInt, err := strconv.Atoi(db)
 	if err != nil {
@@ -33,13 +33,13 @@ func NewRedisDAO(ctx context.Context, redisURL string, db string, username strin
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	return &RedisDAO{
+	return &RedisClient{
 		client: client,
 	}, nil
 }
 
-func (dao *RedisDAO) Set(ctx context.Context, key string, value string, expiry time.Duration) error {
-	// Set the value for the given key in Redis.
+// Set the value for the given key in Redis.
+func (dao *RedisClient) Set(ctx context.Context, key string, value string, expiry time.Duration) error {
 	err := dao.client.Set(ctx, key, value, expiry).Err()
 	if err != nil {
 		return fmt.Errorf("failed to set value in Redis: %w", err)
@@ -47,8 +47,8 @@ func (dao *RedisDAO) Set(ctx context.Context, key string, value string, expiry t
 	return nil
 }
 
-func (dao *RedisDAO) Get(ctx context.Context, key string) (string, error) {
-	// Get the value for the given key from Redis.
+// Get the value for the given key from Redis.
+func (dao *RedisClient) Get(ctx context.Context, key string) (string, error) {
 	val, err := dao.client.Get(ctx, key).Result()
 	if err != nil {
 		return "", fmt.Errorf("failed to get value from Redis: %w", err)
