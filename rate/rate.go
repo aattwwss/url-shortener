@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	"url-shortener/store"
 )
 
 type Strategy int
@@ -35,15 +34,21 @@ const (
 	keyPrefix = "rate"
 )
 
-type Limiter struct {
-	templates   embed.FS
-	redisClient *store.RedisClient
-	strategy    Strategy
-	limit       int // number of requests per minute
+type Store interface {
+	Get(ctx context.Context, key string) (string, error)
+	Incr(ctx context.Context, key string) (int64, error)
+	IncrWithExpiry(ctx context.Context, key string, expiry time.Duration) (int64, error)
 }
 
-func NewLimiter(templates embed.FS, redisClient *store.RedisClient, strategy int, limit int) Limiter {
-	return Limiter{templates: templates, redisClient: redisClient, strategy: Strategy(strategy), limit: limit}
+type Limiter struct {
+	templates embed.FS
+	store     Store
+	strategy  Strategy
+	limit     int // number of requests per minute
+}
+
+func NewLimiter(templates embed.FS, store Store, strategy int, limit int) Limiter {
+	return Limiter{templates: templates, store: store, strategy: Strategy(strategy), limit: limit}
 }
 
 func (l Limiter) Limit(next http.Handler) http.Handler {
@@ -88,11 +93,11 @@ func (l Limiter) ServeError(w http.ResponseWriter, _ *http.Request) {
 
 func (l Limiter) FixedWindow(ctx context.Context, identifier string) bool {
 	key := fmt.Sprintf("%s:%s:%v", keyPrefix, identifier, time.Now().Minute())
-	count, _ := l.redisClient.Get(ctx, key)
+	count, _ := l.store.Get(ctx, key)
 	countInt, err := strconv.Atoi(count)
 	if err != nil || countInt == 0 {
 		expiry := time.Duration(60-time.Now().Second()) * time.Second
-		_, err = l.redisClient.IncrWithExpiry(ctx, key, expiry)
+		_, err = l.store.IncrWithExpiry(ctx, key, expiry)
 		if err != nil {
 			log.Printf("Error incrementing key with expiry %v: %v\n", key, err)
 			return false
@@ -101,7 +106,7 @@ func (l Limiter) FixedWindow(ctx context.Context, identifier string) bool {
 	}
 
 	if countInt < l.limit {
-		_, err = l.redisClient.Incr(ctx, key)
+		_, err = l.store.Incr(ctx, key)
 		if err != nil {
 			log.Printf("Error incrementing key %v: %v\n", key, err)
 			return false

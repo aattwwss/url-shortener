@@ -13,12 +13,16 @@ import (
 	"strings"
 	"time"
 	"url-shortener/rate"
-	"url-shortener/store"
 )
 
 const (
 	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 )
+
+type UrlStore interface {
+	Set(ctx context.Context, key string, value string, expiry time.Duration) error
+	Get(ctx context.Context, key string) (string, error)
+}
 
 type UrlPayload struct {
 	Original  string
@@ -27,13 +31,13 @@ type UrlPayload struct {
 }
 
 type Zap struct {
-	store     store.KeyValueStorage
+	store     UrlStore
 	isHttps   bool
 	limiter   rate.Limiter
 	templates embed.FS
 }
 
-func NewZap(store store.KeyValueStorage, isHttpsEnv string, limiter rate.Limiter, templates embed.FS) Zap {
+func NewZap(store UrlStore, isHttpsEnv string, limiter rate.Limiter, templates embed.FS) Zap {
 	isHttpsEnv = strings.ToLower(isHttpsEnv)
 	return Zap{
 		store:     store,

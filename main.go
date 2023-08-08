@@ -26,30 +26,33 @@ func main() {
 	if err != nil {
 		log.Fatalln("Error loading .env file")
 	}
+	ctx := context.Background()
 
 	redisUrl := os.Getenv("REDIS_URL")
 	redisUsername := os.Getenv("REDIS_USERNAME")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
 	redisDatabase := os.Getenv("REDIS_DATABASE")
+	strategyEnv := os.Getenv("STRATEGY")
+	limitEnv := os.Getenv("REQUEST_LIMIT")
+	isHTTPS := os.Getenv("IS_HTTPS")
 
-	ctx := context.Background()
 	redisClient, err := store.NewRedisClient(ctx, redisUrl, redisDatabase, redisUsername, redisPassword)
 	if err != nil {
 		log.Fatalf("Error setting up redis: %v", err)
 	}
 
-	strategyEnv := os.Getenv("STRATEGY")
-	limitEnv := os.Getenv("REQUEST_LIMIT")
 	strategy, err := strconv.Atoi(strategyEnv)
 	if err != nil || strategy < 1 || strategy > 4 {
 		log.Fatalf("strategy must be from 1 to 4: %v", err)
 	}
+
 	limit, err := strconv.Atoi(limitEnv)
 	if err != nil || limit < -1 {
 		log.Fatalf("limit must be larger than -1: %v", err)
 	}
+
 	limiter := rate.NewLimiter(templateFolder, redisClient, strategy, limit)
-	z := zap.NewZap(redisClient, os.Getenv("IS_HTTPS"), limiter, templateFolder)
+	z := zap.NewZap(redisClient, isHTTPS, limiter, templateFolder)
 
 	router := mux.NewRouter()
 	z.Register(router)
@@ -63,7 +66,7 @@ func main() {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatalln("There's an error with the server", err)
+		log.Fatalln("error starting the server: ", err)
 	}
 
 	return
