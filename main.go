@@ -2,20 +2,26 @@ package main
 
 import (
 	"context"
+	"embed"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
+	"url-shortener/rate"
 	"url-shortener/store"
 	"url-shortener/zap"
 
 	"github.com/gorilla/mux"
 )
 
-func main() {
-	rateLimit := Limiter{}
+var (
+	//go:embed templates
+	templateFolder embed.FS
+)
 
+func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalln("Error loading .env file")
@@ -32,16 +38,21 @@ func main() {
 		log.Fatalf("Error setting up redis: %v", err)
 	}
 
-	z := zap.NewZap(redisClient, os.Getenv("IS_HTTPS"))
+	strategyEnv := os.Getenv("STRATEGY")
+	limitEnv := os.Getenv("REQUEST_LIMIT")
+	strategy, err := strconv.Atoi(strategyEnv)
+	if err != nil {
+		log.Fatalf("strategy must be from 1 to 4: %v", err)
+	}
+	limit, err := strconv.Atoi(limitEnv)
+	if err != nil {
+		log.Fatalf("limit must be a number: %v", err)
+	}
+	limiter := rate.NewLimiter(templateFolder, redisClient, strategy, limit)
+	z := zap.NewZap(redisClient, os.Getenv("IS_HTTPS"), limiter, templateFolder)
 
 	router := mux.NewRouter()
-	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	router.HandleFunc("/", z.Home).Methods(http.MethodGet)
-	router.HandleFunc("/r/{key}", z.Redirect).Methods(http.MethodGet)
-
-	limited := router.PathPrefix("").Subrouter()
-	limited.Use(rateLimit.Limit)
-	limited.HandleFunc("/", z.Create).Methods(http.MethodPost)
+	z.Register(router)
 
 	server := &http.Server{
 		Addr:         ":9090",

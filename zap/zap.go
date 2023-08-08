@@ -12,12 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"url-shortener/rate"
 	"url-shortener/store"
-)
-
-var (
-	//go:embed templates
-	templateFolder embed.FS
 )
 
 const (
@@ -31,20 +27,34 @@ type UrlPayload struct {
 }
 
 type Zap struct {
-	store   store.KeyValueStorer
-	isHttps bool
+	store     store.KeyValueStorage
+	isHttps   bool
+	limiter   rate.Limiter
+	templates embed.FS
 }
 
-func NewZap(store store.KeyValueStorer, isHttpsEnv string) Zap {
+func NewZap(store store.KeyValueStorage, isHttpsEnv string, limiter rate.Limiter, templates embed.FS) Zap {
 	isHttpsEnv = strings.ToLower(isHttpsEnv)
 	return Zap{
-		store:   store,
-		isHttps: isHttpsEnv == "true" || isHttpsEnv == "yes" || isHttpsEnv == "1",
+		store:     store,
+		isHttps:   isHttpsEnv == "true" || isHttpsEnv == "yes" || isHttpsEnv == "1",
+		limiter:   limiter,
+		templates: templates,
 	}
 }
 
+func (z Zap) Register(router *mux.Router) {
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	router.HandleFunc("/", z.Home).Methods(http.MethodGet)
+	router.HandleFunc("/r/{key}", z.Redirect).Methods(http.MethodGet)
+
+	limited := router.PathPrefix("").Subrouter()
+	limited.Use(z.limiter.Limit)
+	limited.HandleFunc("/", z.Create).Methods(http.MethodPost)
+}
+
 func (z Zap) Home(w http.ResponseWriter, _ *http.Request) {
-	homeTemplate, err := template.ParseFS(templateFolder, "templates/index.html")
+	homeTemplate, err := template.ParseFS(z.templates, "templates/index.html")
 	if err != nil {
 		return
 	}
@@ -52,7 +62,7 @@ func (z Zap) Home(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (z Zap) Create(w http.ResponseWriter, r *http.Request) {
-	homeTemplate, err := template.ParseFS(templateFolder, "templates/index.html")
+	homeTemplate, err := template.ParseFS(z.templates, "templates/index.html")
 	if err != nil {
 		return
 	}

@@ -55,3 +55,20 @@ func (dao *RedisClient) Get(ctx context.Context, key string) (string, error) {
 	}
 	return val, nil
 }
+
+// Incr increments the value for the given key in Redis.
+func (dao *RedisClient) Incr(ctx context.Context, key string) (int64, error) {
+	return dao.client.Incr(ctx, key).Result()
+}
+
+// IncrWithExpiry increments the value for the given key in Redis and sets the expiry.
+func (dao *RedisClient) IncrWithExpiry(ctx context.Context, key string, expiry time.Duration) (int64, error) {
+	pipe := dao.client.Pipeline()
+	intCmd := pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, expiry)
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to increment with expiry value in Redis: %w", err)
+	}
+	return intCmd.Val(), nil
+}

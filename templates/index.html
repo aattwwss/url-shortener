@@ -34,7 +34,7 @@
             {{.Shortened}}
             <button id="copy-button">Copy</button>
             {{else if .Error}}
-            Invalid URL.
+            {{.Error}}
             {{end}}
         </div>
     </main>
