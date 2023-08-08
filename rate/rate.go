@@ -12,6 +12,17 @@ import (
 	"url-shortener/store"
 )
 
+type Strategy int
+
+const (
+	FixedWindow = Strategy(iota + 1)
+	SlidingWindow
+	TokenBucket
+	LeakyBucket
+
+	keyPrefix = "rate"
+)
+
 type Limiter struct {
 	templates   embed.FS
 	redisClient *store.RedisClient
@@ -22,19 +33,6 @@ type Limiter struct {
 func NewLimiter(templates embed.FS, redisClient *store.RedisClient, strategy int, limit int) Limiter {
 	return Limiter{templates: templates, redisClient: redisClient, strategy: Strategy(strategy), limit: limit}
 }
-
-type Strategy int
-
-const (
-	FixedWindow = Strategy(iota + 1)
-	SlidingWindow
-	TokenBucket
-	LeakyBucket
-)
-
-const (
-	keyPrefix = "rate"
-)
 
 func (l Limiter) Limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
