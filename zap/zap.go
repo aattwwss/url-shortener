@@ -43,16 +43,6 @@ func NewZap(store store.KeyValueStorage, isHttpsEnv string, limiter rate.Limiter
 	}
 }
 
-func (z Zap) Register(router *mux.Router) {
-	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	router.HandleFunc("/", z.Home).Methods(http.MethodGet)
-	router.HandleFunc("/r/{key}", z.Redirect).Methods(http.MethodGet)
-
-	limited := router.PathPrefix("").Subrouter()
-	limited.Use(z.limiter.Limit)
-	limited.HandleFunc("/", z.Create).Methods(http.MethodPost)
-}
-
 func (z Zap) Home(w http.ResponseWriter, _ *http.Request) {
 	homeTemplate, err := template.ParseFS(z.templates, "templates/index.html")
 	if err != nil {
@@ -105,6 +95,32 @@ func (z Zap) Redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, longUrl, http.StatusMovedPermanently)
+}
+
+func (z Zap) Register(router *mux.Router) {
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	router.HandleFunc("/", z.Home).Methods(http.MethodGet)
+	router.HandleFunc("/r/{key}", z.Redirect).Methods(http.MethodGet)
+
+	limited := router.PathPrefix("").Subrouter()
+	limited.Use(addIdentifier, z.limiter.Limit)
+	limited.HandleFunc("/", z.Create).Methods(http.MethodPost)
+}
+
+func addIdentifier(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := getIpAddress(r)
+		ctx := rate.SetIdentifier(r.Context(), ip)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func getIpAddress(r *http.Request) string {
+	ip := r.Header.Get("Cf-Connecting-Ip")
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	return ip
 }
 
 func (z Zap) getHttpScheme() string {

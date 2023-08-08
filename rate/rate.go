@@ -19,7 +19,19 @@ const (
 	SlidingWindow
 	TokenBucket
 	LeakyBucket
+)
 
+type contextKey int
+
+const (
+	contextKeyIdentifier = contextKey(iota)
+)
+
+func SetIdentifier(ctx context.Context, value string) context.Context {
+	return context.WithValue(ctx, contextKeyIdentifier, value)
+}
+
+const (
 	keyPrefix = "rate"
 )
 
@@ -49,7 +61,7 @@ func (l Limiter) Allow(ctx context.Context, r *http.Request) bool {
 		return true
 	}
 
-	identifier := r.Header.Get("Cf-Connecting-Ip")
+	identifier := r.Context().Value(contextKeyIdentifier).(string)
 	if l.strategy == FixedWindow {
 		return l.FixedWindow(ctx, identifier)
 	} else if l.strategy == SlidingWindow {
@@ -58,8 +70,9 @@ func (l Limiter) Allow(ctx context.Context, r *http.Request) bool {
 		return l.TokenBucket(ctx, identifier)
 	} else if l.strategy == LeakyBucket {
 		return l.LeakyBucket(ctx, identifier)
+	} else {
+		return l.FixedWindow(ctx, identifier)
 	}
-	return false
 }
 
 func (l Limiter) ServeError(w http.ResponseWriter, _ *http.Request) {

@@ -39,8 +39,8 @@ func NewRedisClient(ctx context.Context, redisURL string, db string, username st
 }
 
 // Set the value for the given key in Redis.
-func (dao *RedisClient) Set(ctx context.Context, key string, value string, expiry time.Duration) error {
-	err := dao.client.Set(ctx, key, value, expiry).Err()
+func (r *RedisClient) Set(ctx context.Context, key string, value string, expiry time.Duration) error {
+	err := r.client.Set(ctx, key, value, expiry).Err()
 	if err != nil {
 		return fmt.Errorf("failed to set value in Redis: %w", err)
 	}
@@ -48,8 +48,8 @@ func (dao *RedisClient) Set(ctx context.Context, key string, value string, expir
 }
 
 // Get the value for the given key from Redis.
-func (dao *RedisClient) Get(ctx context.Context, key string) (string, error) {
-	val, err := dao.client.Get(ctx, key).Result()
+func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
+	val, err := r.client.Get(ctx, key).Result()
 	if err != nil {
 		return "", fmt.Errorf("failed to get value from Redis: %w", err)
 	}
@@ -57,13 +57,13 @@ func (dao *RedisClient) Get(ctx context.Context, key string) (string, error) {
 }
 
 // Incr increments the value for the given key in Redis.
-func (dao *RedisClient) Incr(ctx context.Context, key string) (int64, error) {
-	return dao.client.Incr(ctx, key).Result()
+func (r *RedisClient) Incr(ctx context.Context, key string) (int64, error) {
+	return r.client.Incr(ctx, key).Result()
 }
 
 // IncrWithExpiry increments the value for the given key in Redis and sets the expiry.
-func (dao *RedisClient) IncrWithExpiry(ctx context.Context, key string, expiry time.Duration) (int64, error) {
-	pipe := dao.client.Pipeline()
+func (r *RedisClient) IncrWithExpiry(ctx context.Context, key string, expiry time.Duration) (int64, error) {
+	pipe := r.client.Pipeline()
 	intCmd := pipe.Incr(ctx, key)
 	pipe.Expire(ctx, key, expiry)
 	_, err := pipe.Exec(ctx)
