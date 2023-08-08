@@ -20,33 +20,17 @@ type Limiter struct {
 }
 
 func NewLimiter(templates embed.FS, redisClient *store.RedisClient, strategy int, limit int) Limiter {
-	return Limiter{templates: templates, redisClient: redisClient, strategy: toStrategy(strategy), limit: limit}
+	return Limiter{templates: templates, redisClient: redisClient, strategy: Strategy(strategy), limit: limit}
 }
 
 type Strategy int
 
 const (
-	_ Strategy = iota
-	FixedWindow
+	FixedWindow = Strategy(iota + 1)
 	SlidingWindow
 	TokenBucket
 	LeakyBucket
 )
-
-func toStrategy(i int) Strategy {
-	switch i {
-	case 1:
-		return FixedWindow
-	case 2:
-		return SlidingWindow
-	case 3:
-		return TokenBucket
-	case 4:
-		return LeakyBucket
-	default:
-		return FixedWindow
-	}
-}
 
 const (
 	keyPrefix = "rate"
@@ -63,6 +47,10 @@ func (l Limiter) Limit(next http.Handler) http.Handler {
 }
 
 func (l Limiter) Allow(ctx context.Context, r *http.Request) bool {
+	if l.limit == -1 {
+		return true
+	}
+
 	identifier := r.Header.Get("Cf-Connecting-Ip")
 	if l.strategy == FixedWindow {
 		return l.FixedWindow(ctx, identifier)
@@ -109,7 +97,6 @@ func (l Limiter) FixedWindow(ctx context.Context, identifier string) bool {
 		}
 		return true
 	}
-
 	return false
 }
 

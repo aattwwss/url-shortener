@@ -41,12 +41,12 @@ func main() {
 	strategyEnv := os.Getenv("STRATEGY")
 	limitEnv := os.Getenv("REQUEST_LIMIT")
 	strategy, err := strconv.Atoi(strategyEnv)
-	if err != nil {
+	if err != nil || strategy < 1 || strategy > 4 {
 		log.Fatalf("strategy must be from 1 to 4: %v", err)
 	}
 	limit, err := strconv.Atoi(limitEnv)
-	if err != nil {
-		log.Fatalf("limit must be a number: %v", err)
+	if err != nil || limit < -1 {
+		log.Fatalf("limit must be larger than -1: %v", err)
 	}
 	limiter := rate.NewLimiter(templateFolder, redisClient, strategy, limit)
 	z := zap.NewZap(redisClient, os.Getenv("IS_HTTPS"), limiter, templateFolder)
