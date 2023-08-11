@@ -24,7 +24,7 @@ var (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalln("Error loading .env file")
+		log.Fatalln("error loading .env file")
 	}
 	ctx := context.Background()
 
@@ -38,7 +38,7 @@ func main() {
 
 	redisClient, err := store.NewRedisClient(ctx, redisUrl, redisDatabase, redisUsername, redisPassword)
 	if err != nil {
-		log.Fatalf("Error setting up redis: %v", err)
+		log.Fatalf("error setting up redis: %v", err)
 	}
 
 	strategy, err := strconv.Atoi(strategyEnv)
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	limiter := rate.NewLimiter(templateFolder, redisClient, strategy, limit)
-	z := zap.NewZap(redisClient, isHTTPS, limiter, templateFolder)
+	z := zap.NewZap(redisClient, isHTTPS, limiter.LimitMiddleware, templateFolder)
 
 	router := mux.NewRouter()
 	z.Register(router)
