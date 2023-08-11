@@ -34,7 +34,7 @@ const (
 	keyPrefix = "rate"
 )
 
-type Store interface {
+type Cache interface {
 	Get(ctx context.Context, key string) (string, error)
 	Incr(ctx context.Context, key string) (int64, error)
 	IncrWithExpiry(ctx context.Context, key string, expiry time.Duration) (int64, error)
@@ -42,16 +42,16 @@ type Store interface {
 
 type Limiter struct {
 	templates embed.FS
-	store     Store
+	cache     Cache
 	strategy  Strategy
 	limit     int // number of requests per minute
 }
 
-func NewLimiter(templates embed.FS, store Store, strategy int, limit int) Limiter {
-	return Limiter{templates: templates, store: store, strategy: Strategy(strategy), limit: limit}
+func NewLimiter(templates embed.FS, cache Cache, strategy int, limit int) Limiter {
+	return Limiter{templates: templates, cache: cache, strategy: Strategy(strategy), limit: limit}
 }
 
-func (l Limiter) Limit(next http.Handler) http.Handler {
+func (l Limiter) LimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if l.Allow(r.Context(), r) {
 			next.ServeHTTP(w, r)
@@ -86,29 +86,29 @@ func (l Limiter) ServeError(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusTooManyRequests)
-	payload := map[string]string{"Error": "Please try again later."}
+	payload := map[string]string{"error": "Please try again later."}
 	_ = homeTemplate.Execute(w, payload)
 	return
 }
 
 func (l Limiter) FixedWindow(ctx context.Context, identifier string) bool {
 	key := fmt.Sprintf("%s:%s:%v", keyPrefix, identifier, time.Now().Minute())
-	count, _ := l.store.Get(ctx, key)
+	count, _ := l.cache.Get(ctx, key)
 	countInt, err := strconv.Atoi(count)
 	if err != nil || countInt == 0 {
 		expiry := time.Duration(60-time.Now().Second()) * time.Second
-		_, err = l.store.IncrWithExpiry(ctx, key, expiry)
+		_, err = l.cache.IncrWithExpiry(ctx, key, expiry)
 		if err != nil {
-			log.Printf("Error incrementing key with expiry %v: %v\n", key, err)
+			log.Printf("error incrementing key with expiry %v: %v\n", key, err)
 			return false
 		}
 		return true
 	}
 
 	if countInt < l.limit {
-		_, err = l.store.Incr(ctx, key)
+		_, err = l.cache.Incr(ctx, key)
 		if err != nil {
-			log.Printf("Error incrementing key %v: %v\n", key, err)
+			log.Printf("error incrementing key %v: %v\n", key, err)
 			return false
 		}
 		return true

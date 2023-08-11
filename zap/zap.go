@@ -19,31 +19,31 @@ const (
 	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 )
 
-type UrlStore interface {
+type urlStore interface {
 	Set(ctx context.Context, key string, value string, expiry time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
 }
 
-type UrlPayload struct {
+type urlPayload struct {
 	Original  string
 	Shortened string
 	Error     string
 }
 
 type Zap struct {
-	store     UrlStore
-	isHttps   bool
-	limiter   rate.Limiter
-	templates embed.FS
+	limitMiddleware func(next http.Handler) http.Handler
+	store           urlStore
+	isHttps         bool
+	templates       embed.FS
 }
 
-func NewZap(store UrlStore, isHttpsEnv string, limiter rate.Limiter, templates embed.FS) Zap {
+func NewZap(store urlStore, isHttpsEnv string, limitMiddleware func(next http.Handler) http.Handler, templates embed.FS) Zap {
 	isHttpsEnv = strings.ToLower(isHttpsEnv)
 	return Zap{
-		store:     store,
-		isHttps:   isHttpsEnv == "true" || isHttpsEnv == "yes" || isHttpsEnv == "1",
-		limiter:   limiter,
-		templates: templates,
+		store:           store,
+		isHttps:         isHttpsEnv == "true" || isHttpsEnv == "yes" || isHttpsEnv == "1",
+		limitMiddleware: limitMiddleware,
+		templates:       templates,
 	}
 }
 
@@ -52,7 +52,7 @@ func (z Zap) Home(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		return
 	}
-	_ = homeTemplate.Execute(w, UrlPayload{})
+	_ = homeTemplate.Execute(w, urlPayload{})
 }
 
 func (z Zap) Create(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +69,7 @@ func (z Zap) Create(w http.ResponseWriter, r *http.Request) {
 
 	_, err = url.ParseRequestURI(longUrl)
 	if err != nil {
-		payload := UrlPayload{input, "", "Invalid url."}
+		payload := urlPayload{input, "", "Invalid url."}
 		_ = homeTemplate.Execute(w, payload)
 		return
 	}
@@ -77,12 +77,12 @@ func (z Zap) Create(w http.ResponseWriter, r *http.Request) {
 	key := randomString(7)
 	scheme := z.getHttpScheme()
 	shortened := fmt.Sprintf("%s://%s/r/%s", scheme, r.Host, key)
-	payload := UrlPayload{input, shortened, ""}
+	payload := urlPayload{input, shortened, ""}
 
 	err = z.store.Set(context.Background(), key, longUrl, toDuration(duration))
 	if err != nil {
 		log.Println("Error setting longUrl")
-		payload := UrlPayload{input, "", "Something went wrong."}
+		payload := urlPayload{input, "", "Something went wrong."}
 		_ = homeTemplate.Execute(w, payload)
 		return
 	}
@@ -107,7 +107,7 @@ func (z Zap) Register(router *mux.Router) {
 	router.HandleFunc("/r/{key}", z.Redirect).Methods(http.MethodGet)
 
 	limited := router.PathPrefix("").Subrouter()
-	limited.Use(addIdentifier, z.limiter.Limit)
+	limited.Use(addIdentifier, z.limitMiddleware)
 	limited.HandleFunc("/", z.Create).Methods(http.MethodPost)
 }
 
