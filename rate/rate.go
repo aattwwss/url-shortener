@@ -47,8 +47,8 @@ type Limiter struct {
 	limit     int // number of requests per minute
 }
 
-func NewLimiter(templates embed.FS, store Cache, strategy int, limit int) Limiter {
-	return Limiter{templates: templates, cache: store, strategy: Strategy(strategy), limit: limit}
+func NewLimiter(templates embed.FS, cache Cache, strategy int, limit int) Limiter {
+	return Limiter{templates: templates, cache: cache, strategy: Strategy(strategy), limit: limit}
 }
 
 func (l Limiter) LimitMiddleware(next http.Handler) http.Handler {
