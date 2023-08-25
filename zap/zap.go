@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-	"url-shortener/rate"
 )
 
 const (
@@ -37,14 +36,19 @@ type Zap struct {
 	templates       embed.FS
 }
 
-func NewZap(store urlStore, isHttpsEnv string, limitMiddleware func(next http.Handler) http.Handler, templates embed.FS) Zap {
+func NewZap(store urlStore, isHttpsEnv string, templates embed.FS) Zap {
 	isHttpsEnv = strings.ToLower(isHttpsEnv)
 	return Zap{
-		store:           store,
-		isHttps:         isHttpsEnv == "true" || isHttpsEnv == "yes" || isHttpsEnv == "1",
-		limitMiddleware: limitMiddleware,
-		templates:       templates,
+		store:     store,
+		isHttps:   isHttpsEnv == "true" || isHttpsEnv == "yes" || isHttpsEnv == "1",
+		templates: templates,
 	}
+}
+
+func (z Zap) NewRouter() *mux.Router {
+	router := mux.NewRouter()
+	z.register(router)
+	return router
 }
 
 func (z Zap) Home(w http.ResponseWriter, _ *http.Request) {
@@ -101,30 +105,11 @@ func (z Zap) Redirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, longUrl, http.StatusMovedPermanently)
 }
 
-func (z Zap) Register(router *mux.Router) {
+func (z Zap) register(router *mux.Router) {
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	router.HandleFunc("/", z.Home).Methods(http.MethodGet)
 	router.HandleFunc("/r/{key}", z.Redirect).Methods(http.MethodGet)
-
-	limited := router.PathPrefix("").Subrouter()
-	limited.Use(addIdentifier, z.limitMiddleware)
-	limited.HandleFunc("/", z.Create).Methods(http.MethodPost)
-}
-
-func addIdentifier(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := getIpAddress(r)
-		ctx := rate.SetIdentifier(r.Context(), ip)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func getIpAddress(r *http.Request) string {
-	ip := r.Header.Get("Cf-Connecting-Ip")
-	if ip == "" {
-		ip = r.RemoteAddr
-	}
-	return ip
+	router.HandleFunc("/", z.Create).Methods(http.MethodPost)
 }
 
 func (z Zap) getHttpScheme() string {
