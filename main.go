@@ -9,11 +9,8 @@ import (
 	"os"
 	"strconv"
 	"time"
-	"url-shortener/rate"
 	"url-shortener/store"
 	"url-shortener/zap"
-
-	"github.com/gorilla/mux"
 )
 
 var (
@@ -51,11 +48,8 @@ func main() {
 		log.Fatalf("limit must be larger than -1: %v", err)
 	}
 
-	limiter := rate.NewLimiter(templateFolder, redisClient, strategy, limit)
-	z := zap.NewZap(redisClient, isHTTPS, limiter.LimitMiddleware, templateFolder)
-
-	router := mux.NewRouter()
-	z.Register(router)
+	z := zap.NewZap(redisClient, isHTTPS, templateFolder)
+	router := z.NewRouter()
 
 	server := &http.Server{
 		Addr:         ":9090",
