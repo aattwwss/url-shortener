@@ -24,7 +24,6 @@ type urlStore interface {
 }
 
 type urlPayload struct {
-	Original  string
 	Shortened string
 	Error     string
 }
@@ -56,11 +55,11 @@ func (z Zap) Home(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		return
 	}
-	_ = homeTemplate.Execute(w, urlPayload{})
+	_ = homeTemplate.Execute(w, "")
 }
 
 func (z Zap) Create(w http.ResponseWriter, r *http.Request) {
-	homeTemplate, err := template.ParseFS(z.templates, "templates/index.html")
+	resultTemplate, err := template.ParseFS(z.templates, "templates/result.html")
 	if err != nil {
 		return
 	}
@@ -73,25 +72,25 @@ func (z Zap) Create(w http.ResponseWriter, r *http.Request) {
 
 	_, err = url.ParseRequestURI(longUrl)
 	if err != nil {
-		payload := urlPayload{input, "", "Invalid url."}
-		_ = homeTemplate.Execute(w, payload)
+		payload := urlPayload{"", "Invalid url."}
+		_ = resultTemplate.Execute(w, payload)
 		return
 	}
 
 	key := randomString(7)
 	scheme := z.getHttpScheme()
 	shortened := fmt.Sprintf("%s://%s/r/%s", scheme, r.Host, key)
-	payload := urlPayload{input, shortened, ""}
+	payload := urlPayload{shortened, ""}
 
 	err = z.store.Set(context.Background(), key, longUrl, toDuration(duration))
 	if err != nil {
 		log.Println("Error setting longUrl")
-		payload := urlPayload{input, "", "Something went wrong."}
-		_ = homeTemplate.Execute(w, payload)
+		payload := urlPayload{"", "Something went wrong."}
+		_ = resultTemplate.Execute(w, payload)
 		return
 	}
 
-	_ = homeTemplate.Execute(w, payload)
+	_ = resultTemplate.Execute(w, payload)
 }
 
 func (z Zap) Redirect(w http.ResponseWriter, r *http.Request) {
