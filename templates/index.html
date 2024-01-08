@@ -33,30 +33,31 @@
             <div id="shortened-url"></div>
             <button id="copy-button">Copy</button>
         </div>
-        <script>
-            document.getElementById("copy-button")?.addEventListener("click", function () {
-                const shortenedUrl = document.getElementById("shortened-url-container").textContent.trim().split("\n")[0];
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(shortenedUrl)
-                        .then(function () {
-                            let button = document.getElementById("copy-button");
-                            if (button.textContent === "Copy") {
-                                setTimeout(function () {
-                                    button.textContent = "Copy";
-                                }, 1000);
-                            }
-                            button.textContent = "Copied";
-                        })
-                        .catch(function (error) {
-                            console.error("Unable to copy to clipboard.", error);
-                        });
-                } else {
-                    console.warn("Clipboard API not available. Unable to copy to clipboard.");
-                }
-            });
-        </script>
     </main>
 </div>
 </body>
 </html>
+
+<script>
+    document.getElementById("copy-button")?.addEventListener("click", function () {
+        const shortenedUrl = document.getElementById("shortened-url-container").textContent.trim().split("\n")[0];
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(shortenedUrl)
+                .then(function () {
+                    let button = document.getElementById("copy-button");
+                    if (button.textContent === "Copy") {
+                        setTimeout(function () {
+                            button.textContent = "Copy";
+                        }, 1000);
+                    }
+                    button.textContent = "Copied";
+                })
+                .catch(function (error) {
+                    console.error("Unable to copy to clipboard.", error);
+                });
+        } else {
+            console.warn("Clipboard API not available. Unable to copy to clipboard.");
+        }
+    });
+</script>
 
