@@ -68,7 +68,7 @@ button:hover {
     background-color: #0f47ff;
 }
 
-#shortened-url {
+#shortened-url-container {
     padding: 10px;
     background-color: #f9f9f9;
     border: 1px solid #ddd;
@@ -78,17 +78,21 @@ button:hover {
     justify-content: space-between;
 }
 
-#shortened-url p {
+#shortened-url-container p {
     flex: 1;
     margin: 0;
 }
 
-#output-url {
-    flex: 4;
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+/*#output-url {*/
+/*    flex: 4;*/
+/*    padding: 10px;*/
+/*    font-size: 16px;*/
+/*    border: 1px solid #ddd;*/
+/*    border-radius: 4px;*/
+/*}*/
+
+#shortened-url:empty + #copy-button {
+    display: none;
 }
 
 #copy-button {
