@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"embed"
+	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -26,14 +28,23 @@ func main() {
 	ctx := context.Background()
 
 	redisUrl := os.Getenv("REDIS_URL")
+	redisScheme := os.Getenv("REDIS_SCHEME")
+	if redisScheme == "" {
+		redisScheme = "redis"
+	}
+	redisHost := os.Getenv("REDIS_HOST")
+	redisPort := os.Getenv("REDIS_PORT")
 	redisUsername := os.Getenv("REDIS_USERNAME")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
 	redisDatabase := os.Getenv("REDIS_DATABASE")
+	if redisUrl == "" {
+		redisUrl = fmt.Sprintf("%s://%s:%s@%s:%s/%s", redisScheme, url.QueryEscape(redisUsername), url.QueryEscape(redisPassword), redisHost, redisPort, redisDatabase)
+	}
 	strategyEnv := os.Getenv("STRATEGY")
 	limitEnv := os.Getenv("REQUEST_LIMIT")
 	isHTTPS := os.Getenv("IS_HTTPS")
 
-	redisClient, err := store.NewRedisClient(ctx, redisUrl, redisDatabase, redisUsername, redisPassword)
+	redisClient, err := store.NewRedisClient(ctx, redisUrl)
 	if err != nil {
 		log.Fatalf("error setting up redis: %v", err)
 	}
