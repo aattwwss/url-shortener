@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -13,21 +12,13 @@ type RedisClient struct {
 	client *redis.Client
 }
 
-func NewRedisClient(ctx context.Context, redisURL string, db string, username string, password string) (*RedisClient, error) {
-	// Create a new Redis client.
-	dbInt, err := strconv.Atoi(db)
+func NewRedisClient(ctx context.Context, redisUrl string) (*RedisClient, error) {
+	opt, err := redis.ParseURL(redisUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse Redis URL: %w", err)
 	}
 
-	client := redis.NewClient(&redis.Options{
-		Addr:     redisURL,
-		Username: username,
-		Password: password,
-		DB:       dbInt,
-	})
-
-	// Test the connection to the Redis server.
+	client := redis.NewClient(opt)
 	_, err = client.Ping(ctx).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
@@ -36,6 +27,7 @@ func NewRedisClient(ctx context.Context, redisURL string, db string, username st
 	return &RedisClient{
 		client: client,
 	}, nil
+
 }
 
 // Set the value for the given key in Redis.
