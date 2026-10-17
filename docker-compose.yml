@@ -8,5 +8,5 @@ services:
       - ./.env:/app/.env
 networks:
   default:
-    name: nginx-proxy-manager
+    name: proxy
     external: true
